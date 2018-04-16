@@ -20,9 +20,16 @@ export default class Cart {
             params.body = JSON.stringify(data);
         }
 
+        this.ajaxMiddleware(true);
+
         return window.fetch(url, params)
             .then(status)
-            .then(response => response.status === 200 ? response.json() : null);
+            .then(response => response.status === 200 ? response.json() : null)
+            .then(d => { middleware(d); this.ajaxMiddleware(false); })
+            .catch(err => {
+                this.loading = false;
+                throw new Error(err);
+            });
     }
 
     _notify() {
@@ -38,32 +45,57 @@ export default class Cart {
     }
 
     getTotalQuantity() {
-        // Change me!
-        return 0;
+        return this.items.reduce((acc, item) => {
+            acc = acc + item.quantity;
+            return acc;
+        }, 0);
     }
 
     getTotalPrice() {
-        // Change me!
-        return 0;
+        return this.items.reduce((acc, item) => {
+            acc = acc + item.price;
+            return acc;
+        }, 0);
+    }
+
+    ajaxMiddleware(bool) {
+        this.loading = bool;
+        this._notify();
     }
 
     load() {
-        // Change me!
+        this._ajax(this.baseUrl, "GET", null, data => {
+            this.items = data;
+        });
     }
 
     addItem(item) {
-        // Change me!
+        this._ajax(this.baseUrl, "POST", item, () => { this.items.push(item); });
     }
-
+    
     updateItem(itemId, item) {
-        // Change me!
+        this._ajax(`${this.baseUrl}${itemId}`, "PUT", item, () => {
+            this.items = this.items.map(elem => {
+                if (elem.id === itemId) {
+                    elem = item;
+                }
+                return elem;
+            });
+        });
     }
-
+    
     removeItem(itemId) {
-        // Change me!
+        this._ajax(`${this.baseUrl}${itemId}`, "DELETE", null, () => {
+            this.items = this.items.filter(elem => {
+                if (elem.id === itemId) {
+                    return false;
+                }
+                return true;
+            });
+        });
     }
-
+    
     removeAll() {
-        // Change me!
+        this._ajax(`${this.baseUrl}`, "DELETE", null, () => { this.items = []; });
     }
 }
